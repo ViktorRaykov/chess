@@ -239,9 +239,43 @@ void makeMove(char** table, int size, playerMove move) {
     table[move.y][move.x] = move.piece;
 }
 
+bool isInsideTable(int size, int x, int y) {
+    return x >= 0 and x <= size and y >= 0 and y <= size;
+}
+
+void makeCPUMove(char** table, int size) {
+    point2D possibleMoves[8];
+    int freeIndex = 0;
+    point2D kingPos = findPositionOnBoard(table, size, CPU_KING);
+    table[kingPos.y][kingPos.x] = EMPTY_CELL;
+    for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+            int x = kingPos.x + dx;
+            int y = kingPos.y + dy;
+            if (isInsideTable(size, x, y) and !(dx == 0 and dy == 0) and table[y][x] == EMPTY_CELL) {
+                table[y][x] = CPU_KING;
+                if (!cpuInCheckmate(table, size)) {
+                    possibleMoves[freeIndex] = {x,y};
+                    freeIndex++;
+                }
+                table[y][x] = EMPTY_CELL;
+            }
+        }
+    }
+    // All moves lead to a loss.
+    if (freeIndex == 0) {
+        table[kingPos.y][kingPos.x] = CPU_KING;
+    }
+    else {
+        int chosenMove = rand() % freeIndex;
+        table[possibleMoves[chosenMove].y][possibleMoves[chosenMove].x] = CPU_KING;
+    }
+}
+
 void startGame(int tableSize) {
     char** table = generateTable(tableSize);
     fillTableWithPieces(table, tableSize);
+    int moves = 0;
     do {
         printTable(table, tableSize);
         playerMove currentMove;
@@ -251,8 +285,16 @@ void startGame(int tableSize) {
         } while (!isValidMove(table, tableSize, currentMove));
         // We are sure the move is valid;
         makeMove(table, tableSize, currentMove);
-        // TODO - move king
+        moves++;
+        makeCPUMove(table, tableSize);
     } while (!cpuInCheckmate(table, tableSize));
+    printTable(table, tableSize);
+    cout<<"You won in "<<moves<<" moves"<<endl;
+    
+    for (int i = 0; i < tableSize; i++) {
+        delete[] table[i];
+    }
+    delete[] table;
 }
 
 int main()
